@@ -33,7 +33,7 @@ export const PRODUCTS: Product[] = [
       'Super soft and ultra-light',
       'Ideal for everyday protection and heavy flow'
     ],
-    image: '/src/assets/leaf-pads.jpg',
+    image: new URL('../assets/leaf-pads.jpg', import.meta.url).href,
     isCombo: false
   },
   {
@@ -55,7 +55,7 @@ export const PRODUCTS: Product[] = [
       'Breathable Multilayers with 4-wing design',
       'Ideal for menstrual cramps and heavy flow'
     ],
-    image: '/src/assets/active-flex.jpg',
+    image: new URL('../assets/active-flex.jpg', import.meta.url).href,
     isCombo: false
   },
   {
@@ -75,7 +75,7 @@ export const PRODUCTS: Product[] = [
       'Ideal for overnight, travel, and workplaces',
       'All-in-one secure protection through every move'
     ],
-    image: '/src/assets/leaf-pads.jpg'
+    image: new URL('../assets/leaf-pads.jpg', import.meta.url).href
   },
   {
     id: 'refill-pack',
@@ -91,7 +91,7 @@ export const PRODUCTS: Product[] = [
       'Perfect for monthly needs',
       'Premium variety pack'
     ],
-    image: '/src/assets/active-flex.jpg',
+    image: new URL('../assets/active-flex.jpg', import.meta.url).href,
     isCombo: true
   }
 ];

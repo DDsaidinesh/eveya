@@ -1,3 +1,4 @@
+import heroProducts from '@/assets/hero-products.jpg';
 import { ArrowRight, Shield, Heart, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -61,11 +62,7 @@ const HeroSection = () => {
           {/* Hero Image */}
           <div className="relative">
             <div className="relative z-10 bg-card p-8 rounded-2xl shadow-elegant border">
-              <img
-                src="/src/assets/hero-products.jpg"
-                alt="Eveya Products"
-                className="w-full h-auto rounded-lg"
-              />
+              <img src={heroProducts} alt="Eveya Products" className="w-full h-auto rounded-lg" />
             </div>
             
             {/* Floating Elements */}
