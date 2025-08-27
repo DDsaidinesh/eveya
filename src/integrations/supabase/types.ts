@@ -14,7 +14,194 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      orders: {
+        Row: {
+          created_at: string
+          delivery_address: Json
+          id: string
+          order_items: Json
+          order_number: string
+          payment_status: string | null
+          total_amount: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivery_address: Json
+          id?: string
+          order_items: Json
+          order_number: string
+          payment_status?: string | null
+          total_amount: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivery_address?: Json
+          id?: string
+          order_items?: Json
+          order_number?: string
+          payment_status?: string | null
+          total_amount?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      rfid_cards: {
+        Row: {
+          balance: number | null
+          bill_id: string
+          card_number: string
+          created_at: string
+          id: string
+          issued_date: string | null
+          last_transaction_date: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          balance?: number | null
+          bill_id: string
+          card_number: string
+          created_at?: string
+          id?: string
+          issued_date?: string | null
+          last_transaction_date?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          balance?: number | null
+          bill_id?: string
+          card_number?: string
+          created_at?: string
+          id?: string
+          issued_date?: string | null
+          last_transaction_date?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      rfid_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          created_at: string
+          description: string | null
+          id: string
+          payment_method: string | null
+          payment_reference: string | null
+          rfid_card_id: string | null
+          transaction_type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          payment_method?: string | null
+          payment_reference?: string | null
+          rfid_card_id?: string | null
+          transaction_type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          payment_method?: string | null
+          payment_reference?: string | null
+          rfid_card_id?: string | null
+          transaction_type?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfid_transactions_rfid_card_id_fkey"
+            columns: ["rfid_card_id"]
+            isOneToOne: false
+            referencedRelation: "rfid_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          address: Json | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          mobile_number: string
+          updated_at: string
+        }
+        Insert: {
+          address?: Json | null
+          created_at?: string
+          email: string
+          full_name: string
+          id: string
+          mobile_number: string
+          updated_at?: string
+        }
+        Update: {
+          address?: Json | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          mobile_number?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          amount: number
+          billing_cycle: string | null
+          created_at: string
+          end_date: string | null
+          id: string
+          start_date: string | null
+          status: string | null
+          stripe_subscription_id: string | null
+          subscription_type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          billing_cycle?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          start_date?: string | null
+          status?: string | null
+          stripe_subscription_id?: string | null
+          subscription_type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          billing_cycle?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          start_date?: string | null
+          status?: string | null
+          stripe_subscription_id?: string | null
+          subscription_type?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
