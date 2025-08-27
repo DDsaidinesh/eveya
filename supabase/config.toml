@@ -1,1 +1,4 @@
 project_id = "wxbwmxqwslqogrsmtbuq"
+
+[functions.rfid-operations]
+verify_jwt = false
