@@ -14,121 +14,239 @@ export type Database = {
   }
   public: {
     Tables: {
+      machine_inventory: {
+        Row: {
+          id: string
+          machine_id: string
+          max_capacity: number
+          product_id: string
+          quantity_available: number
+          slot_number: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          machine_id: string
+          max_capacity?: number
+          product_id: string
+          quantity_available?: number
+          slot_number: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          machine_id?: string
+          max_capacity?: number
+          product_id?: string
+          quantity_available?: number
+          slot_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machine_inventory_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "vending_machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machine_inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          dispensed: boolean | null
+          id: string
+          order_id: string
+          product_id: string
+          quantity: number
+          slot_number: string
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          dispensed?: boolean | null
+          id?: string
+          order_id: string
+          product_id: string
+          quantity?: number
+          slot_number: string
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          dispensed?: boolean | null
+          id?: string
+          order_id?: string
+          product_id?: string
+          quantity?: number
+          slot_number?: string
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           created_at: string
-          delivery_address: Json
+          dispensed_at: string | null
+          dispensing_code: string | null
+          dispensing_code_expires_at: string | null
           id: string
-          order_items: Json
+          machine_id: string | null
           order_number: string
-          payment_status: string | null
-          total_amount: number
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          delivery_address: Json
-          id?: string
-          order_items: Json
-          order_number: string
-          payment_status?: string | null
-          total_amount: number
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          delivery_address?: Json
-          id?: string
-          order_items?: Json
-          order_number?: string
-          payment_status?: string | null
-          total_amount?: number
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      rfid_cards: {
-        Row: {
-          balance: number | null
-          bill_id: string
-          card_number: string
-          created_at: string
-          id: string
-          issued_date: string | null
-          last_transaction_date: string | null
-          status: string | null
-          user_id: string | null
-        }
-        Insert: {
-          balance?: number | null
-          bill_id: string
-          card_number: string
-          created_at?: string
-          id?: string
-          issued_date?: string | null
-          last_transaction_date?: string | null
-          status?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          balance?: number | null
-          bill_id?: string
-          card_number?: string
-          created_at?: string
-          id?: string
-          issued_date?: string | null
-          last_transaction_date?: string | null
-          status?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      rfid_transactions: {
-        Row: {
-          amount: number
-          balance_after: number
-          balance_before: number
-          created_at: string
-          description: string | null
-          id: string
+          payment_id: string | null
           payment_method: string | null
-          payment_reference: string | null
-          rfid_card_id: string | null
-          transaction_type: string | null
+          status: string | null
+          total_amount: number
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
-          amount: number
-          balance_after: number
-          balance_before: number
           created_at?: string
-          description?: string | null
+          dispensed_at?: string | null
+          dispensing_code?: string | null
+          dispensing_code_expires_at?: string | null
           id?: string
+          machine_id?: string | null
+          order_number: string
+          payment_id?: string | null
           payment_method?: string | null
-          payment_reference?: string | null
-          rfid_card_id?: string | null
-          transaction_type?: string | null
+          status?: string | null
+          total_amount: number
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
-          amount?: number
-          balance_after?: number
-          balance_before?: number
           created_at?: string
-          description?: string | null
+          dispensed_at?: string | null
+          dispensing_code?: string | null
+          dispensing_code_expires_at?: string | null
           id?: string
+          machine_id?: string | null
+          order_number?: string
+          payment_id?: string | null
           payment_method?: string | null
-          payment_reference?: string | null
-          rfid_card_id?: string | null
-          transaction_type?: string | null
+          status?: string | null
+          total_amount?: number
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "rfid_transactions_rfid_card_id_fkey"
-            columns: ["rfid_card_id"]
+            foreignKeyName: "fk_orders_machine_id"
+            columns: ["machine_id"]
             isOneToOne: false
-            referencedRelation: "rfid_cards"
+            referencedRelation: "vending_machines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name: string
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          machine_id: string
+          order_id: string
+          rating: number | null
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          machine_id: string
+          order_id: string
+          rating?: number | null
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          machine_id?: string
+          order_id?: string
+          rating?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "vending_machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -163,42 +281,74 @@ export type Database = {
         }
         Relationships: []
       }
-      user_subscriptions: {
+      user_sessions: {
         Row: {
-          amount: number
-          billing_cycle: string | null
           created_at: string
-          end_date: string | null
+          expires_at: string
           id: string
-          start_date: string | null
-          status: string | null
-          stripe_subscription_id: string | null
-          subscription_type: string | null
-          user_id: string | null
+          session_token: string
+          user_id: string
         }
         Insert: {
-          amount: number
-          billing_cycle?: string | null
           created_at?: string
-          end_date?: string | null
+          expires_at: string
           id?: string
-          start_date?: string | null
-          status?: string | null
-          stripe_subscription_id?: string | null
-          subscription_type?: string | null
-          user_id?: string | null
+          session_token: string
+          user_id: string
         }
         Update: {
-          amount?: number
-          billing_cycle?: string | null
           created_at?: string
-          end_date?: string | null
+          expires_at?: string
           id?: string
-          start_date?: string | null
+          session_token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vending_machines: {
+        Row: {
+          created_at: string
+          id: string
+          latitude: number | null
+          location: string
+          longitude: number | null
+          machine_code: string
+          name: string
+          qr_code: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          latitude?: number | null
+          location: string
+          longitude?: number | null
+          machine_code: string
+          name: string
+          qr_code?: string | null
           status?: string | null
-          stripe_subscription_id?: string | null
-          subscription_type?: string | null
-          user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          latitude?: number | null
+          location?: string
+          longitude?: number | null
+          machine_code?: string
+          name?: string
+          qr_code?: string | null
+          status?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
