@@ -1,88 +1,64 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CreditCard, Package, Settings, Wallet, Plus } from 'lucide-react';
-
-interface RFIDCard {
-  id: string;
-  card_number: string;
-  bill_id: string;
-  balance: number;
-  status: string;
-  issued_date: string;
-}
-
-interface Transaction {
-  id: string;
-  transaction_type: string;
-  amount: number;
-  description: string;
-  created_at: string;
-}
-
-interface Subscription {
-  id: string;
-  subscription_type: string;
-  status: string;
-  start_date: string;
-  end_date: string;
-  amount: number;
-}
+import { MapPin, ShoppingBag, TrendingUp, Clock, Package, Settings } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Order, VendingMachine, Product } from '@/types/vending';
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
-  const [rfidCards, setRfidCards] = useState<RFIDCard[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [nearbyMachines, setNearbyMachines] = useState<VendingMachine[]>([]);
+  const [recentProducts, setRecentProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      loadDashboardData();
+      fetchDashboardData();
     }
   }, [user]);
 
-  const loadDashboardData = async () => {
+  const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      
+      // Fetch user's recent orders and nearby machines
+      const [ordersResponse, machinesResponse, productsResponse] = await Promise.all([
+        supabase
+          .from('orders')
+          .select('*')
+          .eq('user_id', user?.id)
+          .order('created_at', { ascending: false })
+          .limit(5),
+        supabase
+          .from('vending_machines')
+          .select('*')
+          .eq('status', 'active')
+          .limit(5),
+        supabase
+          .from('products')
+          .select('*')
+          .eq('is_active', true)
+          .limit(4)
+      ]);
 
-      // Load RFID cards
-      const { data: cardsData } = await supabase
-        .from('rfid_cards')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
+      if (ordersResponse.data) setOrders(ordersResponse.data);
+      if (machinesResponse.data) setNearbyMachines(machinesResponse.data as VendingMachine[]);
+      if (productsResponse.data) setRecentProducts(productsResponse.data as Product[]);
 
-      // Load recent transactions
-      const { data: transactionsData } = await supabase
-        .from('rfid_transactions')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      // Load subscriptions
-      const { data: subscriptionsData } = await supabase
-        .from('user_subscriptions')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
-
-      setRfidCards(cardsData || []);
-      setTransactions(transactionsData || []);
-      setSubscriptions(subscriptionsData || []);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const totalBalance = rfidCards.reduce((sum, card) => sum + (card.balance || 0), 0);
+  const totalSpent = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+  const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'paid').length;
+  const completedOrders = orders.filter(o => o.status === 'completed').length;
 
   if (loading) {
     return (
@@ -116,187 +92,187 @@ const Dashboard = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
-              <Wallet className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
+              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹{totalBalance.toFixed(2)}</div>
+              <div className="text-2xl font-bold">₹{totalSpent.toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">
-                Across {rfidCards.length} cards
+                Lifetime purchases
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Cards</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{rfidCards.filter(card => card.status === 'active').length}</div>
+              <div className="text-2xl font-bold">{activeOrders}</div>
               <p className="text-xs text-muted-foreground">
-                RFID cards active
+                Pending collection
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Subscriptions</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Completed Orders</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{subscriptions.filter(sub => sub.status === 'active').length}</div>
+              <div className="text-2xl font-bold">{completedOrders}</div>
               <p className="text-xs text-muted-foreground">
-                Active subscriptions
+                Successfully collected
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Nearby Machines</CardTitle>
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{nearbyMachines.length}</div>
+              <p className="text-xs text-muted-foreground">
+                Available now
               </p>
             </CardContent>
           </Card>
         </div>
 
         {/* Main Content Tabs */}
-        <Tabs defaultValue="cards" className="w-full">
+        <Tabs defaultValue="orders" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="cards">RFID Cards</TabsTrigger>
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+            <TabsTrigger value="orders">Orders</TabsTrigger>
+            <TabsTrigger value="machines">Machines</TabsTrigger>
+            <TabsTrigger value="products">Products</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="cards" className="mt-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Your RFID Cards</h2>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add New Card
-              </Button>
-            </div>
-            
-            {rfidCards.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <CreditCard className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No RFID cards found</p>
-                  <Button className="mt-4">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Get Your First Card
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {rfidCards.map((card) => (
-                  <Card key={card.id}>
-                    <CardHeader>
-                      <div className="flex justify-between items-center">
-                        <CardTitle className="text-base">Card #{card.card_number}</CardTitle>
-                        <Badge variant={card.status === 'active' ? 'default' : 'secondary'}>
-                          {card.status}
+          <TabsContent value="orders" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Orders</CardTitle>
+                <CardDescription>Your latest vending machine purchases</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {orders.length === 0 ? (
+                  <div className="text-center py-8">
+                    <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">No orders yet</p>
+                    <Button className="mt-4">Find Machines</Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {orders.map((order) => (
+                      <div key={order.id} className="flex justify-between items-center p-4 border rounded-lg">
+                        <div>
+                          <p className="font-medium">Order #{order.order_number}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(order.created_at).toLocaleDateString()}
+                          </p>
+                          {order.dispensing_code && (
+                            <p className="text-sm font-mono text-primary">
+                              Code: {order.dispensing_code}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">₹{order.total_amount.toFixed(2)}</p>
+                          <Badge variant={
+                            order.status === 'completed' ? 'default' : 
+                            order.status === 'pending' ? 'secondary' : 
+                            order.status === 'failed' ? 'destructive' : 'outline'
+                          }>
+                            {order.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="machines" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Nearby Machines</CardTitle>
+                <CardDescription>Available vending machines near you</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {nearbyMachines.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">No machines available</p>
+                    <Button className="mt-4">Refresh Location</Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {nearbyMachines.map((machine) => (
+                      <div key={machine.id} className="flex justify-between items-center p-4 border rounded-lg">
+                        <div>
+                          <p className="font-medium">{machine.name}</p>
+                          <p className="text-sm text-muted-foreground">{machine.location}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Code: {machine.machine_code}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <Badge variant={machine.status === 'active' ? 'default' : 'secondary'}>
+                            {machine.status}
+                          </Badge>
+                          <Button size="sm" className="mt-2 w-full">
+                            View Machine
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="products" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Available Products</CardTitle>
+                <CardDescription>Feminine hygiene products in our vending machines</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {recentProducts.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">No products available</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {recentProducts.map((product) => (
+                      <div key={product.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                        <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center">
+                          <Package className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{product.name}</p>
+                          <p className="text-sm text-muted-foreground">{product.description}</p>
+                          <p className="text-sm font-semibold text-primary">₹{product.price}</p>
+                        </div>
+                        <Badge variant="outline" className="capitalize">
+                          {product.category}
                         </Badge>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Balance:</span>
-                          <span className="font-semibold">₹{card.balance}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Bill ID:</span>
-                          <span className="text-sm font-mono">{card.bill_id}</span>
-                        </div>
-                        <Button size="sm" className="w-full mt-2">
-                          Recharge Card
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="transactions" className="mt-6">
-            <h2 className="text-xl font-semibold mb-4">Recent Transactions</h2>
-            
-            {transactions.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Wallet className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No transactions found</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {transactions.map((transaction) => (
-                  <Card key={transaction.id}>
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">{transaction.description}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(transaction.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className={`font-semibold ${
-                            transaction.transaction_type === 'recharge' 
-                              ? 'text-green-600' 
-                              : 'text-red-600'
-                          }`}>
-                            {transaction.transaction_type === 'recharge' ? '+' : '-'}₹{transaction.amount}
-                          </p>
-                          <Badge variant="outline" className="text-xs">
-                            {transaction.transaction_type}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="subscriptions" className="mt-6">
-            <h2 className="text-xl font-semibold mb-4">Your Subscriptions</h2>
-            
-            {subscriptions.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No active subscriptions</p>
-                  <Button className="mt-4">
-                    Explore Plans
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {subscriptions.map((subscription) => (
-                  <Card key={subscription.id}>
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium capitalize">{subscription.subscription_type} Plan</p>
-                          <p className="text-sm text-muted-foreground">
-                            Started: {new Date(subscription.start_date).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">₹{subscription.amount}/month</p>
-                          <Badge variant={subscription.status === 'active' ? 'default' : 'secondary'}>
-                            {subscription.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>

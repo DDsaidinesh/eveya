@@ -1,8 +1,8 @@
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import HeroSection from '@/components/sections/HeroSection';
+import VendingMachinesSection from '@/components/sections/VendingMachinesSection';
 import ProductsSection from '@/components/sections/ProductsSection';
-import RFIDRecharge from '@/components/rfid/RFIDRecharge';
 import AboutSection from '@/components/sections/AboutSection';
 import ProductTechnologySection from '@/components/sections/ProductTechnologySection';
 import BenefitsSection from '@/components/sections/BenefitsSection';
@@ -15,12 +15,12 @@ const Index = () => {
       <Header />
       <main>
         <HeroSection />
+        <VendingMachinesSection />
         <AboutSection />
         <ProductTechnologySection />
         <ProductsSection />
         <BenefitsSection />
         <ProductComparisonSection />
-        <RFIDRecharge />
         <ContactSection />
       </main>
       <Footer />

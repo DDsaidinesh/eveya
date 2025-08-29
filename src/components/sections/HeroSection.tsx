@@ -20,15 +20,15 @@ const HeroSection = () => {
             </div>
             
             <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
-              Premium Care for
+              Access Feminine Care
               <span className="bg-gradient-primary bg-clip-text text-transparent block">
-                Every Woman
+                Anytime, Anywhere
               </span>
             </h1>
             
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl">
-              Experience ultimate comfort and protection with Eveya's revolutionary 
-              feminine hygiene products. Designed with love, crafted with science.
+              Find premium feminine hygiene products instantly through our convenient vending machines. 
+              Discreet, accessible, and always available when you need them most.
             </p>
 
             {/* Features */}
@@ -50,11 +50,11 @@ const HeroSection = () => {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Button size="lg" variant="premium" className="group">
-                Shop Now
+                Find Machines
                 <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button size="lg" variant="elegant">
-                Learn More
+                How It Works
               </Button>
             </div>
           </div>
