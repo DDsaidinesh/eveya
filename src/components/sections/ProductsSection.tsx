@@ -1,19 +1,80 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Filter, Grid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import ProductCard from '@/components/product/ProductCard';
-import { PRODUCTS } from '@/data/products';
+import { supabase } from '@/integrations/supabase/client';
+import { Product as DBProduct } from '@/types/vending';
+
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  variants: {
+    size: string;
+    price: number;
+    originalPrice?: number;
+  }[];
+  features: string[];
+  image: string;
+  isCombo?: boolean;
+}
 
 const ProductsSection = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<string[]>(['All']);
 
-  const categories = ['All', 'Sanitary Pads', 'Period Panties', 'Combo Pack'];
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+
+      // Transform database products to match the expected format
+      const transformedProducts: Product[] = data.map((dbProduct: DBProduct) => ({
+        id: dbProduct.id,
+        name: dbProduct.name,
+        description: dbProduct.description || '',
+        category: dbProduct.category || 'Other',
+        variants: [
+          {
+            size: 'Standard',
+            price: dbProduct.price,
+          }
+        ],
+        features: [],
+        image: dbProduct.image_url || '/api/placeholder/300/300',
+        isCombo: false
+      }));
+
+      setProducts(transformedProducts);
+
+      // Extract unique categories
+      const uniqueCategories = ['All', ...Array.from(new Set(data.map(p => p.category).filter(Boolean)))];
+      setCategories(uniqueCategories);
+
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredProducts = selectedCategory === 'All' 
-    ? PRODUCTS 
-    : PRODUCTS.filter(product => product.category === selectedCategory);
+    ? products 
+    : products.filter(product => product.category === selectedCategory);
 
   const handleAddToCart = (productId: string, variant: any) => {
     // This function is no longer needed as ProductCard handles it internally
@@ -81,18 +142,26 @@ const ProductsSection = () => {
         </div>
 
         {/* Products Grid */}
-        <div className={`grid gap-6 ${
-          viewMode === 'grid' 
-            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
-            : 'grid-cols-1'
-        }`}>
-          {filteredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="h-96 bg-muted animate-pulse rounded-lg"></div>
+            ))}
+          </div>
+        ) : (
+          <div className={`grid gap-6 ${
+            viewMode === 'grid' 
+              ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+              : 'grid-cols-1'
+          }`}>
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Load More */}
         {filteredProducts.length > 8 && (

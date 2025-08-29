@@ -14,14 +14,14 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { useCart } from '@/contexts/CartContext';
-import RfidDiscountCard from './RfidDiscountCard';
+
 
 interface CartDrawerProps {
   children: React.ReactNode;
 }
 
 const CartDrawer = ({ children }: CartDrawerProps) => {
-  const { state, updateQuantity, removeFromCart, clearCart, finalTotal } = useCart();
+  const { state, updateQuantity, removeFromCart, clearCart } = useCart();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleCheckout = () => {
@@ -134,23 +134,13 @@ const CartDrawer = ({ children }: CartDrawerProps) => {
 
           <Separator className="my-6" />
 
-          {/* RFID Discount Section */}
-          <RfidDiscountCard />
-
-          <Separator className="my-6" />
-
           {/* Order Summary */}
           <div className="space-y-3">
             <div className="flex justify-between text-sm">
               <span>Subtotal:</span>
               <span>₹{state.total}</span>
             </div>
-            {state.discountAmount > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span>RFID Discount:</span>
-                <span>-₹{state.discountAmount}</span>
-              </div>
-            )}
+
             <div className="flex justify-between text-sm">
               <span>Shipping:</span>
               <span className="text-green-600">Free</span>
@@ -158,7 +148,7 @@ const CartDrawer = ({ children }: CartDrawerProps) => {
             <Separator />
             <div className="flex justify-between font-semibold text-lg">
               <span>Total:</span>
-              <span className="text-primary">₹{finalTotal}</span>
+              <span className="text-primary">₹{state.total}</span>
             </div>
           </div>
         </div>

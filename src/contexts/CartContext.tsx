@@ -18,8 +18,6 @@ interface CartState {
   items: CartItem[];
   total: number;
   itemCount: number;
-  discountAmount: number;
-  rfidCardNumber?: string;
 }
 
 type CartAction =
@@ -27,8 +25,6 @@ type CartAction =
   | { type: 'REMOVE_ITEM'; payload: { id: string } }
   | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
   | { type: 'CLEAR_CART' }
-  | { type: 'APPLY_RFID_DISCOUNT'; payload: { cardNumber: string; discountAmount: number } }
-  | { type: 'REMOVE_RFID_DISCOUNT' }
   | { type: 'LOAD_CART'; payload: CartState };
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
@@ -107,21 +103,6 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         items: [],
         total: 0,
         itemCount: 0,
-        discountAmount: 0,
-      };
-
-    case 'APPLY_RFID_DISCOUNT':
-      return {
-        ...state,
-        discountAmount: action.payload.discountAmount,
-        rfidCardNumber: action.payload.cardNumber,
-      };
-
-    case 'REMOVE_RFID_DISCOUNT':
-      return {
-        ...state,
-        discountAmount: 0,
-        rfidCardNumber: undefined,
       };
 
     case 'LOAD_CART':
@@ -136,7 +117,6 @@ const initialState: CartState = {
   items: [],
   total: 0,
   itemCount: 0,
-  discountAmount: 0,
 };
 
 interface CartContextType {
@@ -145,9 +125,6 @@ interface CartContextType {
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
-  applyRfidDiscount: (cardNumber: string, discountAmount: number) => void;
-  removeRfidDiscount: () => void;
-  finalTotal: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -202,23 +179,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const applyRfidDiscount = (cardNumber: string, discountAmount: number) => {
-    dispatch({ type: 'APPLY_RFID_DISCOUNT', payload: { cardNumber, discountAmount } });
-    toast({
-      title: "RFID discount applied",
-      description: `₹${discountAmount} discount applied from your RFID card.`,
-    });
-  };
 
-  const removeRfidDiscount = () => {
-    dispatch({ type: 'REMOVE_RFID_DISCOUNT' });
-    toast({
-      title: "RFID discount removed",
-      description: "RFID card discount has been removed.",
-    });
-  };
-
-  const finalTotal = Math.max(0, state.total - state.discountAmount);
 
   return (
     <CartContext.Provider
@@ -228,9 +189,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         removeFromCart,
         updateQuantity,
         clearCart,
-        applyRfidDiscount,
-        removeRfidDiscount,
-        finalTotal,
       }}
     >
       {children}

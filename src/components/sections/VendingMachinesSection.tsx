@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MapPin, QrCode, Package } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { VendingMachine, MachineInventory } from '@/types/vending';
 
@@ -32,8 +33,8 @@ const VendingMachinesSection = () => {
   };
 
   const handleViewMachine = (machineId: string) => {
-    // Navigate to machine details or open QR scanner
-    console.log('View machine:', machineId);
+    // Navigate to vending app
+    window.location.href = '/vending';
   };
 
   if (loading) {
@@ -56,7 +57,7 @@ const VendingMachinesSection = () => {
   }
 
   return (
-    <section className="py-20 px-4 bg-muted/50">
+    <section id="vending-machines" className="py-20 px-4 bg-muted/50">
       <div className="container mx-auto max-w-6xl">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -124,10 +125,12 @@ const VendingMachinesSection = () => {
             </div>
 
             <div className="text-center">
-              <Button size="lg" className="bg-gradient-to-r from-primary to-primary/80">
-                <MapPin className="h-5 w-5 mr-2" />
-                View All Locations
-              </Button>
+              <Link to="/vending">
+                <Button size="lg" className="bg-gradient-to-r from-primary to-primary/80">
+                  <MapPin className="h-5 w-5 mr-2" />
+                  Start Vending App
+                </Button>
+              </Link>
             </div>
           </>
         )}
