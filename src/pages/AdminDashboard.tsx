@@ -15,9 +15,13 @@ import {
   Settings,
   LogOut,
   Monitor,
-  TrendingUp
+  TrendingUp,
+  Edit
 } from 'lucide-react';
 import { VendingMachine, Product, Order } from '@/types/vending';
+import { VendingMachineForm } from '@/components/admin/VendingMachineForm';
+import { ProductForm } from '@/components/admin/ProductForm';
+import { MachineInventoryDialog } from '@/components/admin/MachineInventoryDialog';
 
 const AdminDashboard = () => {
   const { user, signOut } = useAuth();
@@ -130,6 +134,20 @@ const AdminDashboard = () => {
     }
   };
 
+  const toggleProductStatus = async (productId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: !currentStatus })
+        .eq('id', productId);
+      
+      if (error) throw error;
+      fetchDashboardData(); // Refresh the data
+    } catch (error) {
+      console.error('Error updating product status:', error);
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
@@ -239,10 +257,15 @@ const AdminDashboard = () => {
           <TabsContent value="machines" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Vending Machines</h2>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Machine
-              </Button>
+              <VendingMachineForm
+                onSuccess={fetchDashboardData}
+                trigger={
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Machine
+                  </Button>
+                }
+              />
             </div>
             
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -268,8 +291,25 @@ const AdminDashboard = () => {
                         Code: {machine.machine_code}
                       </p>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline">Edit</Button>
-                        <Button size="sm" variant="outline">View Inventory</Button>
+                        <VendingMachineForm
+                          machine={machine}
+                          onSuccess={fetchDashboardData}
+                          trigger={
+                            <Button size="sm" variant="outline">
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                          }
+                        />
+                        <MachineInventoryDialog
+                          machine={machine}
+                          trigger={
+                            <Button size="sm" variant="outline">
+                              <Package className="h-3 w-3 mr-1" />
+                              View Inventory
+                            </Button>
+                          }
+                        />
                       </div>
                     </div>
                   </CardContent>
@@ -281,10 +321,15 @@ const AdminDashboard = () => {
           <TabsContent value="products" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Products</h2>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Product
-              </Button>
+              <ProductForm
+                onSuccess={fetchDashboardData}
+                trigger={
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Product
+                  </Button>
+                }
+              />
             </div>
             
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -301,8 +346,21 @@ const AdminDashboard = () => {
                         {product.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline">Edit</Button>
-                        <Button size="sm" variant="outline">
+                        <ProductForm
+                          product={product}
+                          onSuccess={fetchDashboardData}
+                          trigger={
+                            <Button size="sm" variant="outline">
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                          }
+                        />
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => toggleProductStatus(product.id, product.is_active)}
+                        >
                           {product.is_active ? 'Deactivate' : 'Activate'}
                         </Button>
                       </div>
