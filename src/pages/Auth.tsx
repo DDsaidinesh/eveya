@@ -18,7 +18,7 @@ const Auth = () => {
       if (isAdmin) {
         navigate('/admin');
       } else {
-        navigate('/dashboard');
+        navigate('/'); // Regular users stay on main page
       }
     }
   }, [user, isAdmin, navigate]);

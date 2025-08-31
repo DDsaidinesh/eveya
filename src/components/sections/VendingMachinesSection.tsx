@@ -2,14 +2,15 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, QrCode, Package } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { MapPin, QrCode, Package, ShoppingBag } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { VendingMachine, MachineInventory } from '@/types/vending';
 
 const VendingMachinesSection = () => {
   const [machines, setMachines] = useState<VendingMachine[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchMachines();
@@ -32,9 +33,13 @@ const VendingMachinesSection = () => {
     }
   };
 
-  const handleViewMachine = (machineId: string) => {
-    // Navigate to vending app
-    window.location.href = '/vending';
+  const handleSelectMachine = (machine: VendingMachine) => {
+    // Store selected machine for quick access in vending app
+    localStorage.setItem('selectedMachine', JSON.stringify({
+      machine,
+      timestamp: Date.now()
+    }));
+    navigate('/vending');
   };
 
   if (loading) {
@@ -110,14 +115,23 @@ const VendingMachinesSection = () => {
                         <span className="text-green-600 font-medium">Products Available</span>
                       </div>
 
-                      <Button 
-                        onClick={() => handleViewMachine(machine.id)}
-                        className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-                        variant="outline"
-                      >
-                        <QrCode className="h-4 w-4 mr-2" />
-                        Scan QR Code
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => handleSelectMachine(machine)}
+                          className="flex-1"
+                          variant="premium"
+                        >
+                          <ShoppingBag className="h-4 w-4 mr-2" />
+                          Shop Here
+                        </Button>
+                        <Button 
+                          onClick={() => handleSelectMachine(machine)}
+                          variant="outline"
+                          size="icon"
+                        >
+                          <QrCode className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

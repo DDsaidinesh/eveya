@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { ShoppingCart, Heart, Star, Eye } from 'lucide-react';
+import { ShoppingCart, Heart, Star, Eye, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Product } from '@/data/products';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
+import QuickPurchaseModal from './QuickPurchaseModal';
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +14,7 @@ interface ProductCardProps {
 
 const ProductCard = ({ product }: ProductCardProps) => {
   const [selectedVariant, setSelectedVariant] = useState(product.variants[0]);
+  const [showQuickPurchase, setShowQuickPurchase] = useState(false);
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
@@ -20,6 +22,10 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   const handleAddToCart = () => {
     addToCart(product, selectedVariant);
+  };
+
+  const handleQuickPurchase = () => {
+    setShowQuickPurchase(true);
   };
 
   const handleToggleWishlist = () => {
@@ -137,16 +143,32 @@ const ProductCard = ({ product }: ProductCardProps) => {
           </div>
         </div>
 
-        {/* Add to Cart Button */}
-        <Button 
-          onClick={handleAddToCart}
-          className="w-full"
-          variant="premium"
-        >
-          <ShoppingCart className="h-4 w-4 mr-2" />
-          Add to Cart
-        </Button>
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleAddToCart}
+            variant="outline"
+            className="flex-1"
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Add to Cart
+          </Button>
+          <Button 
+            onClick={handleQuickPurchase}
+            variant="premium"
+            className="flex-1"
+          >
+            <Zap className="h-4 w-4 mr-2" />
+            Buy Now
+          </Button>
+        </div>
       </CardContent>
+
+      <QuickPurchaseModal 
+        open={showQuickPurchase}
+        onOpenChange={setShowQuickPurchase}
+        product={product}
+      />
     </Card>
   );
 };

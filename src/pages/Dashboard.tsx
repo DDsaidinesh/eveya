@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MapPin, ShoppingBag, TrendingUp, Clock, Package, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Order, VendingMachine, Product } from '@/types/vending';
@@ -165,7 +166,9 @@ const Dashboard = () => {
                   <div className="text-center py-8">
                     <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <p className="text-muted-foreground">No orders yet</p>
-                    <Button className="mt-4">Find Machines</Button>
+                    <Button className="mt-4" asChild>
+                      <Link to="/vending">Find Machines</Link>
+                    </Button>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -211,7 +214,7 @@ const Dashboard = () => {
                   <div className="text-center py-8">
                     <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <p className="text-muted-foreground">No machines available</p>
-                    <Button className="mt-4">Refresh Location</Button>
+                    <Button className="mt-4" onClick={fetchDashboardData}>Refresh Location</Button>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -228,8 +231,8 @@ const Dashboard = () => {
                           <Badge variant={machine.status === 'active' ? 'default' : 'secondary'}>
                             {machine.status}
                           </Badge>
-                          <Button size="sm" className="mt-2 w-full">
-                            View Machine
+                          <Button size="sm" className="mt-2 w-full" asChild>
+                            <Link to="/vending">Select Machine</Link>
                           </Button>
                         </div>
                       </div>
