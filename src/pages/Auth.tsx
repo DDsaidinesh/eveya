@@ -8,16 +8,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Auth = () => {
-  const { user, signIn, signUp } = useAuth();
+  const { user, isAdmin, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
+    if (user && isAdmin !== null) {
+      if (isAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     }
-  }, [user, navigate]);
+  }, [user, isAdmin, navigate]);
 
   const [signInData, setSignInData] = useState({
     email: '',

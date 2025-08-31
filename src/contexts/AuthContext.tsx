@@ -7,6 +7,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isAdmin: boolean | null;
   signUp: (email: string, password: string, fullName: string, mobileNumber: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -31,6 +32,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -38,6 +40,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Check admin status when user changes
+        if (session?.user) {
+          setTimeout(() => {
+            checkAdminStatus(session.user);
+          }, 0);
+        } else {
+          setIsAdmin(null);
+        }
+        
         setLoading(false);
       }
     );
@@ -46,11 +58,34 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        setTimeout(() => {
+          checkAdminStatus(session.user);
+        }, 0);
+      }
+      
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const checkAdminStatus = async (user: User) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('is_super_user')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      setIsAdmin(data?.is_super_user || false);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    }
+  };
 
   const signUp = async (email: string, password: string, fullName: string, mobileNumber: string) => {
     try {
@@ -187,6 +222,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     user,
     session,
     loading,
+    isAdmin,
     signUp,
     signIn,
     signOut,
