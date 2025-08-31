@@ -258,6 +258,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          is_super_user: boolean | null
           mobile_number: string
           updated_at: string
         }
@@ -267,6 +268,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          is_super_user?: boolean | null
           mobile_number: string
           updated_at?: string
         }
@@ -276,6 +278,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          is_super_user?: boolean | null
           mobile_number?: string
           updated_at?: string
         }
@@ -357,7 +360,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_super_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
