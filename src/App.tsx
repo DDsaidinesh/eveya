@@ -11,7 +11,9 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Profile from "./pages/Profile";
-import MobileVendingApp from "./pages/MobileVendingApp";
+import MachinePage from "./pages/MachinePage";
+import MachineCheckout from "./pages/MachineCheckout";
+import OrderConfirmation from "./pages/OrderConfirmation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,7 +33,9 @@ const App = () => (
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/profile" element={<Profile />} />
-                <Route path="/vending" element={<MobileVendingApp />} />
+                <Route path="/machine/:machineCode" element={<MachinePage />} />
+                <Route path="/checkout/:machineCode" element={<MachineCheckout />} />
+                <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

@@ -167,7 +167,7 @@ const Dashboard = () => {
                     <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <p className="text-muted-foreground">No orders yet</p>
                     <Button className="mt-4" asChild>
-                      <Link to="/vending">Find Machines</Link>
+                      <Link to="/#vending-machines">Find Machines</Link>
                     </Button>
                   </div>
                 ) : (
@@ -232,7 +232,7 @@ const Dashboard = () => {
                             {machine.status}
                           </Badge>
                           <Button size="sm" className="mt-2 w-full" asChild>
-                            <Link to="/vending">Select Machine</Link>
+                            <Link to={`/machine/${machine.machine_code}`}>Shop Here</Link>
                           </Button>
                         </div>
                       </div>

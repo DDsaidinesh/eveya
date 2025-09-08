@@ -34,12 +34,7 @@ const VendingMachinesSection = () => {
   };
 
   const handleSelectMachine = (machine: VendingMachine) => {
-    // Store selected machine for quick access in vending app
-    localStorage.setItem('selectedMachine', JSON.stringify({
-      machine,
-      timestamp: Date.now()
-    }));
-    navigate('/vending');
+    navigate(`/machine/${machine.machine_code}`);
   };
 
   if (loading) {
@@ -139,12 +134,12 @@ const VendingMachinesSection = () => {
             </div>
 
             <div className="text-center">
-              <Link to="/vending">
-                <Button size="lg" className="bg-gradient-to-r from-primary to-primary/80">
+              <Button size="lg" className="bg-gradient-to-r from-primary to-primary/80" asChild>
+                <Link to="#vending-machines">
                   <MapPin className="h-5 w-5 mr-2" />
-                  Start Vending App
-                </Button>
-              </Link>
+                  View All Machines
+                </Link>
+              </Button>
             </div>
           </>
         )}

@@ -53,15 +53,9 @@ const QuickPurchaseModal = ({ open, onOpenChange, product }: QuickPurchaseModalP
 
   const handleProceedToPurchase = () => {
     if (selectedMachine) {
-      // Store the product and machine selection in localStorage for the vending app
-      localStorage.setItem('quickPurchase', JSON.stringify({
-        product,
-        machine: selectedMachine,
-        timestamp: Date.now()
-      }));
-      
+      // Navigate to machine-specific page
+      navigate(`/machine/${selectedMachine.machine_code}`);
       onOpenChange(false);
-      navigate('/vending');
     }
   };
 
