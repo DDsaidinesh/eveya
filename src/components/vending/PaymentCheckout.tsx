@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,12 +14,19 @@ import {
   QrCode,
   ShieldCheck,
   Timer,
-  Package
+  Package,
+  ExternalLink
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { VendingMachine } from '@/types/vending';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
+import { 
+  createPaymentOrder, 
+  checkPaymentStatus, 
+  PhonePeCheckout,
+  CreateOrderRequest 
+} from '@/services/paymentService';
 
 interface VendingCartItem {
   product: any;
@@ -34,7 +41,7 @@ interface PaymentCheckoutProps {
   onPaymentSuccess: (orderData: any) => void;
 }
 
-type PaymentMethod = 'card' | 'upi' | 'wallet';
+type PaymentMethod = 'phonepe' | 'card' | 'upi' | 'wallet';
 
 const PaymentCheckout: React.FC<PaymentCheckoutProps> = ({
   machine,
@@ -42,8 +49,8 @@ const PaymentCheckout: React.FC<PaymentCheckoutProps> = ({
   onBack,
   onPaymentSuccess
 }) => {
-  const { user } = useAuth();
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
+  const { user, session } = useAuth();
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('phonepe');
   const [processing, setProcessing] = useState(false);
   const [cardDetails, setCardDetails] = useState({
     number: '',
@@ -52,6 +59,23 @@ const PaymentCheckout: React.FC<PaymentCheckoutProps> = ({
     name: ''
   });
   const [upiId, setUpiId] = useState('');
+  const [currentOrder, setCurrentOrder] = useState<any>(null);
+  const [phonepeAvailable, setPhonepeAvailable] = useState(false);
+
+  // Check if PhonePe is available
+  useEffect(() => {
+    const checkPhonePe = () => {
+      setPhonepeAvailable(PhonePeCheckout.isAvailable());
+    };
+
+    // Check immediately
+    checkPhonePe();
+
+    // Also check after a short delay in case script is still loading
+    const timeout = setTimeout(checkPhonePe, 1000);
+
+    return () => clearTimeout(timeout);
+  }, []);
 
   const getTotalAmount = () => {
     return cartItems.reduce((total, item) => total + (item.product.price * item.quantity), 0);
@@ -135,68 +159,201 @@ const PaymentCheckout: React.FC<PaymentCheckoutProps> = ({
     setProcessing(true);
 
     try {
-      // Simulate payment processing based on method
-      let paymentId = '';
-      let paymentSuccess = false;
-
-      switch (paymentMethod) {
-        case 'card':
-          if (!cardDetails.number || !cardDetails.expiry || !cardDetails.cvv || !cardDetails.name) {
-            toast({
-              title: "Invalid Card Details",
-              description: "Please fill in all card details",
-              variant: "destructive",
-            });
-            return;
-          }
-          // Simulate card payment
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          paymentId = `card_${Date.now()}`;
-          paymentSuccess = true;
-          break;
-
-        case 'upi':
-          if (!upiId) {
-            toast({
-              title: "Invalid UPI ID",
-              description: "Please enter a valid UPI ID",
-              variant: "destructive",
-            });
-            return;
-          }
-          // Simulate UPI payment
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          paymentId = `upi_${Date.now()}`;
-          paymentSuccess = true;
-          break;
-
-        case 'wallet':
-          // Simulate wallet payment
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          paymentId = `wallet_${Date.now()}`;
-          paymentSuccess = true;
-          break;
-      }
-
-      if (paymentSuccess) {
-        const orderData = await createOrder(paymentId);
-        
+      if (!user || !session?.access_token) {
         toast({
-          title: "Payment Successful!",
-          description: `Your order has been placed. Dispensing code: ${orderData.dispensing_code}`,
+          title: "Authentication Required",
+          description: "Please log in to continue with payment",
+          variant: "destructive",
         });
-
-        onPaymentSuccess(orderData);
+        return;
       }
+
+      // Handle PhonePe payment
+      if (paymentMethod === 'phonepe') {
+        await handlePhonePePayment();
+        return;
+      }
+
+      // Handle other payment methods (mock for now)
+      await handleOtherPaymentMethods();
+
     } catch (error) {
       console.error('Payment error:', error);
       toast({
         title: "Payment Failed",
-        description: "Please try again or use a different payment method",
+        description: error instanceof Error ? error.message : "There was an error processing your payment. Please try again.",
         variant: "destructive",
       });
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handlePhonePePayment = async () => {
+    if (!phonepeAvailable) {
+      toast({
+        title: "PhonePe Unavailable",
+        description: "PhonePe payment service is not available. Please try again later.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Prepare order request
+    const orderRequest: CreateOrderRequest = {
+      user_id: user!.id,
+      machine_id: machine.id,
+      machine_code: machine.machine_code,
+      items: cartItems.map(item => ({
+        product_id: item.product.id,
+        product_name: item.product.name,
+        product_price: item.product.price,
+        quantity: item.quantity,
+        slot_number: item.slotNumber
+      })),
+      redirect_url: `${window.location.origin}/vending-app`,
+      expire_after: 1200, // 20 minutes
+      meta_info: {
+        udf1: `machine_${machine.machine_code}`,
+        udf2: `user_${user!.id}`,
+        udf3: `items_${cartItems.length}`
+      }
+    };
+
+    try {
+      // Create payment order with backend
+      const paymentResponse = await createPaymentOrder(orderRequest, session!.access_token);
+      setCurrentOrder(paymentResponse);
+
+      if (!paymentResponse.redirect_url) {
+        throw new Error("No payment URL received from server");
+      }
+
+      toast({
+        title: "Opening Payment Gateway",
+        description: "Please complete your payment in the PhonePe window",
+      });
+
+      // Open PhonePe PayPage in iframe
+      PhonePeCheckout.openPayPage(
+        paymentResponse.redirect_url,
+        async (response: string) => {
+          await handlePaymentCallback(response, paymentResponse.merchant_order_id);
+        }
+      );
+
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const handlePaymentCallback = async (response: string, merchantOrderId: string) => {
+    if (response === 'USER_CANCEL') {
+      toast({
+        title: "Payment Cancelled",
+        description: "You cancelled the payment. You can try again.",
+        variant: "destructive",
+      });
+      setProcessing(false);
+      return;
+    }
+
+    if (response === 'CONCLUDED') {
+      toast({
+        title: "Verifying Payment",
+        description: "Please wait while we verify your payment...",
+      });
+
+      try {
+        // Check payment status
+        const statusResponse = await checkPaymentStatus(merchantOrderId, session!.access_token);
+        
+        if (statusResponse.status === 'COMPLETED') {
+          toast({
+            title: "Payment Successful!",
+            description: `Your order has been placed. Order ID: ${statusResponse.merchant_order_id}`,
+          });
+
+          // Create the order data for the success callback
+          const orderData = {
+            ...currentOrder,
+            ...statusResponse,
+            dispensing_code: currentOrder?.dispensing_code || `CODE-${Date.now().toString().slice(-6)}`,
+            items: cartItems
+          };
+
+          onPaymentSuccess(orderData);
+        } else if (statusResponse.status === 'FAILED') {
+          toast({
+            title: "Payment Failed",
+            description: statusResponse.error_message || "Payment was not successful. Please try again.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Payment Pending",
+            description: "Your payment is being processed. Please wait...",
+          });
+        }
+      } catch (error) {
+        console.error('Status check error:', error);
+        toast({
+          title: "Verification Failed",
+          description: "Unable to verify payment status. Please contact support if amount was deducted.",
+          variant: "destructive",
+        });
+      }
+    }
+
+    setProcessing(false);
+  };
+
+  const handleOtherPaymentMethods = async () => {
+    // Mock implementation for other payment methods
+    let paymentSuccess = false;
+
+    switch (paymentMethod) {
+      case 'card':
+        if (!cardDetails.number || !cardDetails.expiry || !cardDetails.cvv || !cardDetails.name) {
+          toast({
+            title: "Invalid Card Details",
+            description: "Please fill in all card details",
+            variant: "destructive",
+          });
+          return;
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        paymentSuccess = true;
+        break;
+
+      case 'upi':
+        if (!upiId) {
+          toast({
+            title: "Invalid UPI ID",
+            description: "Please enter a valid UPI ID",
+            variant: "destructive",
+          });
+          return;
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        paymentSuccess = true;
+        break;
+
+      case 'wallet':
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        paymentSuccess = true;
+        break;
+    }
+
+    if (paymentSuccess) {
+      const orderData = await createOrder(`mock_${paymentMethod}_${Date.now()}`);
+      
+      toast({
+        title: "Payment Successful!",
+        description: `Your order has been placed. Dispensing code: ${orderData.dispensing_code}`,
+      });
+
+      onPaymentSuccess(orderData);
     }
   };
 
@@ -259,13 +416,35 @@ const PaymentCheckout: React.FC<PaymentCheckoutProps> = ({
               onValueChange={(value: PaymentMethod) => setPaymentMethod(value)}
               className="space-y-4"
             >
+              {/* PhonePe Payment */}
+              <div className="flex items-center space-x-2 p-3 border rounded-lg bg-purple-50 border-purple-200">
+                <RadioGroupItem value="phonepe" id="phonepe" />
+                <Label htmlFor="phonepe" className="flex items-center gap-3 flex-1 cursor-pointer">
+                  <div className="w-5 h-5 bg-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">P</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">PhonePe</p>
+                      {phonepeAvailable ? (
+                        <Badge variant="secondary" className="text-xs">Recommended</Badge>
+                      ) : (
+                        <Badge variant="destructive" className="text-xs">Unavailable</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">UPI, Cards, Net Banking & Wallets</p>
+                  </div>
+                </Label>
+              </div>
+
               {/* Credit/Debit Card */}
               <div className="flex items-center space-x-2 p-3 border rounded-lg">
                 <RadioGroupItem value="card" id="card" />
                 <Label htmlFor="card" className="flex items-center gap-3 flex-1 cursor-pointer">
                   <CreditCard className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="font-medium">Credit/Debit Card</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">Credit/Debit Card</p>
+                      <Badge variant="outline" className="text-xs">Mock</Badge>
+                    </div>
                     <p className="text-sm text-muted-foreground">Visa, Mastercard, Rupay</p>
                   </div>
                 </Label>
@@ -276,8 +455,11 @@ const PaymentCheckout: React.FC<PaymentCheckoutProps> = ({
                 <RadioGroupItem value="upi" id="upi" />
                 <Label htmlFor="upi" className="flex items-center gap-3 flex-1 cursor-pointer">
                   <QrCode className="h-5 w-5 text-purple-600" />
-                  <div>
-                    <p className="font-medium">UPI</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">UPI</p>
+                      <Badge variant="outline" className="text-xs">Mock</Badge>
+                    </div>
                     <p className="text-sm text-muted-foreground">PhonePe, GooglePay, Paytm</p>
                   </div>
                 </Label>
@@ -288,9 +470,12 @@ const PaymentCheckout: React.FC<PaymentCheckoutProps> = ({
                 <RadioGroupItem value="wallet" id="wallet" />
                 <Label htmlFor="wallet" className="flex items-center gap-3 flex-1 cursor-pointer">
                   <Wallet className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="font-medium">Digital Wallet</p>
-                    <p className="text-sm text-muted-foreground">Paytm, PhonePe Wallet</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">Digital Wallet</p>
+                      <Badge variant="outline" className="text-xs">Mock</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">Paytm, Amazon Pay</p>
                   </div>
                 </Label>
               </div>
