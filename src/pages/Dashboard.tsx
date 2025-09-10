@@ -16,6 +16,12 @@ const Dashboard = () => {
   const [recentProducts, setRecentProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Helper function to safely convert total_amount to number
+  const safeParseAmount = (amount: number | string): number => {
+    if (typeof amount === 'number') return amount;
+    return parseFloat(amount) || 0;
+  };
+
   useEffect(() => {
     if (user) {
       fetchDashboardData();
@@ -57,7 +63,7 @@ const Dashboard = () => {
     }
   };
 
-  const totalSpent = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+  const totalSpent = orders.reduce((sum, order) => sum + safeParseAmount(order.total_amount), 0);
   const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'paid').length;
   const completedOrders = orders.filter(o => o.status === 'completed').length;
 
@@ -186,7 +192,7 @@ const Dashboard = () => {
                           )}
                         </div>
                         <div className="text-right">
-                          <p className="font-medium">₹{order.total_amount.toFixed(2)}</p>
+                          <p className="font-medium">₹{safeParseAmount(order.total_amount).toFixed(2)}</p>
                           <Badge variant={
                             order.status === 'completed' ? 'default' : 
                             order.status === 'pending' ? 'secondary' : 

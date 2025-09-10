@@ -226,6 +226,7 @@ const MachineCheckout: React.FC = () => {
               orderData: {
                 ...currentOrder,
                 ...statusResponse,
+                total_amount: totalAmount, // Use the correct total amount from checkout
                 items: cartItems
               }
             }

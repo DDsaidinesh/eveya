@@ -28,8 +28,9 @@ interface OrderData {
   dispensing_code: string;
   dispensing_code_expires_at: string;
   status: string;
-  total_amount: number;
+  total_amount: number | string; // Can be string from database
   created_at: string;
+  machine_code?: string; // Added for fallback display
   items?: any[];
 }
 
@@ -42,7 +43,7 @@ const OrderConfirmation: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [machine, setMachine] = useState<VendingMachine | null>(null);
   const [timeLeft, setTimeLeft] = useState<string>('');
@@ -50,6 +51,12 @@ const OrderConfirmation: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const state = location.state as LocationState;
+
+  // Helper function to safely convert total_amount to number
+  const safeParseAmount = (amount: number | string): number => {
+    if (typeof amount === 'number') return amount;
+    return parseFloat(amount) || 0;
+  };
 
   useEffect(() => {
     if (state?.orderData && state?.machine) {
@@ -72,6 +79,10 @@ const OrderConfirmation: React.FC = () => {
       updateTimeLeft(); // Initial update
 
       return () => clearInterval(interval);
+    } else if (orderData?.dispensing_code) {
+      // If there's a dispensing code but no expiry time, show "No expiry" or similar
+      setTimeLeft('');
+      setIsExpired(false);
     }
   }, [orderData]);
 
@@ -79,17 +90,25 @@ const OrderConfirmation: React.FC = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          vending_machines(*)
-        `)
-        .eq('id', orderId)
-        .eq('user_id', user?.id)
-        .single();
+      // Use backend API instead of Supabase direct access
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001'}/api/v1/orders/${orderId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+      });
 
-      if (error || !data) {
+      if (!response.ok) {
+        console.error('API Error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error details:', errorText);
+        throw new Error(`Failed to fetch order details: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('API Response:', data); // Debug log
+      
+      if (!data) {
         toast({
           title: "Order Not Found",
           description: "The requested order could not be found.",
@@ -100,12 +119,43 @@ const OrderConfirmation: React.FC = () => {
       }
 
       setOrderData(data);
-      setMachine(data.vending_machines);
+      // Set machine data if available in the response
+      if (data.vending_machine) {
+        setMachine(data.vending_machine);
+      }
     } catch (error) {
-      console.error('Error fetching order:', error);
+      console.error('Error fetching order from API:', error);
+      
+      // Fallback: Try fetching directly from Supabase
+      try {
+        console.log('Trying Supabase fallback...');
+        const { data: supabaseData, error: supabaseError } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            vending_machines(*)
+          `)
+          .eq('id', orderId)
+          .eq('user_id', user?.id)
+          .single();
+
+        if (supabaseError || !supabaseData) {
+          throw new Error('Order not found in database');
+        }
+
+        console.log('Supabase fallback data:', supabaseData);
+        setOrderData(supabaseData);
+        setMachine(supabaseData.vending_machines);
+        return;
+        
+      } catch (fallbackError) {
+        console.error('Supabase fallback failed:', fallbackError);
+      }
+      
+      // Show more detailed error information
       toast({
         title: "Error Loading Order",
-        description: "Failed to load order details. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to load order details. Please try again.",
         variant: "destructive",
       });
       navigate('/');
@@ -165,7 +215,7 @@ const OrderConfirmation: React.FC = () => {
     );
   }
 
-  if (!orderData || !machine) {
+  if (!orderData) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -221,10 +271,17 @@ const OrderConfirmation: React.FC = () => {
               </div>
 
               {!isExpired ? (
-                <div className="flex items-center justify-center gap-2 text-sm">
-                  <Clock className="h-4 w-4 text-orange-600" />
-                  <span>Code expires in: <strong className="text-orange-600">{timeLeft}</strong></span>
-                </div>
+                orderData.dispensing_code_expires_at && timeLeft ? (
+                  <div className="flex items-center justify-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-orange-600" />
+                    <span>Code expires in: <strong className="text-orange-600">{timeLeft}</strong></span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-green-600" />
+                    <span className="text-green-600">No expiration time set</span>
+                  </div>
+                )
               ) : (
                 <div className="text-red-600 font-medium">
                   ⚠️ Dispensing code has expired. Please contact support.
@@ -243,11 +300,11 @@ const OrderConfirmation: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <p className="font-medium">{machine.name}</p>
-                <p className="text-muted-foreground">{machine.location}</p>
+                <p className="font-medium">{machine?.name || 'Machine Information'}</p>
+                <p className="text-muted-foreground">{machine?.location || 'Location not available'}</p>
                 <div className="flex items-center gap-2">
                   <QrCode className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-mono">{machine.machine_code}</span>
+                  <span className="text-sm font-mono">{machine?.machine_code || orderData.machine_code || 'N/A'}</span>
                 </div>
               </div>
             </CardContent>
@@ -274,7 +331,7 @@ const OrderConfirmation: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Total Amount</p>
-                  <p className="font-bold text-primary">₹{orderData.total_amount.toFixed(2)}</p>
+                  <p className="font-bold text-primary">₹{safeParseAmount(orderData.total_amount).toFixed(2)}</p>
                 </div>
               </div>
 
@@ -307,7 +364,7 @@ const OrderConfirmation: React.FC = () => {
               <div className="space-y-3 text-sm">
                 <div className="flex gap-3">
                   <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold">1</div>
-                  <p>Go to the vending machine at <strong>{machine.location}</strong></p>
+                  <p>Go to the vending machine at <strong>{machine?.location || 'the specified location'}</strong></p>
                 </div>
                 <div className="flex gap-3">
                   <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold">2</div>

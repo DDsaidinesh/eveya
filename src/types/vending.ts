@@ -39,7 +39,7 @@ export interface Order {
   order_number: string;
   user_id?: string;
   machine_id?: string;
-  total_amount: number;
+  total_amount: number | string; // Database returns as string, but can be number
   status: string; // Changed from union type to string to match DB
   payment_method?: string;
   payment_id?: string;
