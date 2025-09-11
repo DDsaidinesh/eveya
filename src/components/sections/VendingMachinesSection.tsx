@@ -6,6 +6,7 @@ import { MapPin, QrCode, Package, ShoppingBag } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { VendingMachine, MachineInventory } from '@/types/vending';
+import { MachineCardSkeleton } from '@/components/ui/machine-card-skeleton';
 
 const VendingMachinesSection = () => {
   const [machines, setMachines] = useState<VendingMachine[]>([]);
@@ -45,9 +46,9 @@ const VendingMachinesSection = () => {
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Finding Nearby Machines...
             </h2>
-            <div className="animate-pulse grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-64 bg-muted rounded-lg"></div>
+                <MachineCardSkeleton key={i} />
               ))}
             </div>
           </div>

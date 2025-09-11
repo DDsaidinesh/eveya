@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import ProductCard from '@/components/product/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
 import { Product as DBProduct } from '@/types/vending';
+import { ProductCardSkeleton } from '@/components/ui/product-card-skeleton';
 
 interface Product {
   id: string;
@@ -145,7 +146,7 @@ const ProductsSection = () => {
         {loading ? (
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-96 bg-muted animate-pulse rounded-lg"></div>
+              <ProductCardSkeleton key={i} />
             ))}
           </div>
         ) : (
