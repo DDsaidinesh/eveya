@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip, Link, Code, Mic, Send, Info, Bot, X } from 'lucide-react';
+import { Send, Info, Bot, X } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -234,9 +234,9 @@ const FloatingAiAssistant = () => {
                   value={message}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  rows={3}
-                  className="w-full px-6 py-4 bg-transparent border-none outline-none resize-none text-base font-normal leading-relaxed text-foreground placeholder-muted-foreground"
-                  placeholder="Ask about products, machines, orders, or anything else..."
+                  rows={2}
+                  className="w-full px-4 py-3 bg-transparent border-none outline-none resize-none text-sm font-normal leading-relaxed text-foreground placeholder-muted-foreground"
+                  placeholder="Ask about products, machines, orders..."
                   style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 />
               </div>
@@ -244,52 +244,27 @@ const FloatingAiAssistant = () => {
               {/* Controls Section */}
               <div className="px-4 pb-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {/* Attachment Group */}
-                    <div className="flex items-center gap-1.5 p-1 bg-secondary rounded-xl border border-border">
-                      <button className="group relative p-2.5 bg-transparent border-none rounded-lg cursor-pointer transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent">
-                        <Paperclip className="w-4 h-4" />
-                      </button>
-                      <button className="group relative p-2.5 bg-transparent border-none rounded-lg cursor-pointer transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent">
-                        <Link className="w-4 h-4" />
-                      </button>
-                      <button className="group relative p-2.5 bg-transparent border-none rounded-lg cursor-pointer transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent">
-                        <Code className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {/* Voice Button */}
-                    <button className="group relative p-2.5 bg-transparent border border-border rounded-lg cursor-pointer transition-all duration-300 text-muted-foreground hover:text-destructive hover:bg-accent">
-                      <Mic className="w-4 h-4" />
-                    </button>
-                  </div>
-
                   <div className="flex items-center gap-3">
                     {/* Character Counter */}
                     <div className="text-xs font-medium text-muted-foreground">
                       <span>{charCount}</span>/<span>{maxChars}</span>
                     </div>
+                  </div>
 
+                  <div className="flex items-center gap-3">
                     {/* Send Button */}
                     <button 
                       onClick={handleSend}
                       disabled={!message.trim()}
-                      className="group relative p-3 bg-primary border-none rounded-xl cursor-pointer transition-all duration-300 text-primary-foreground shadow-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="group relative p-2.5 bg-primary border-none rounded-lg cursor-pointer transition-all duration-300 text-primary-foreground shadow-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Send className="w-5 h-5" />
+                      <Send className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
                 {/* Footer Info */}
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border text-xs text-muted-foreground gap-6">
-                  <div className="flex items-center gap-2">
-                    <Info className="w-3 h-3" />
-                    <span>
-                      Press <kbd className="px-1.5 py-1 bg-secondary border border-border rounded text-foreground font-mono text-xs shadow-sm">Shift + Enter</kbd> for new line
-                    </span>
-                  </div>
-
+                <div className="flex items-center justify-center mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                     <span>Online</span>
