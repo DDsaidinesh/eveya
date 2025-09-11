@@ -2,20 +2,34 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, QrCode, Package, ShoppingBag } from 'lucide-react';
+import { MapPin, QrCode, Package, ShoppingBag, Navigation } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { VendingMachine, MachineInventory } from '@/types/vending';
 import { MachineCardSkeleton } from '@/components/ui/machine-card-skeleton';
+import { getUserLocation, getDistance, formatDistance, UserLocation } from '@/utils/location';
+
+interface MachineWithDistance extends VendingMachine {
+  distance?: number;
+}
 
 const VendingMachinesSection = () => {
-  const [machines, setMachines] = useState<VendingMachine[]>([]);
+  const [machines, setMachines] = useState<MachineWithDistance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchMachines();
+    requestLocation();
   }, []);
+
+  useEffect(() => {
+    if (userLocation && machines.length > 0) {
+      sortMachinesByDistance();
+    }
+  }, [userLocation, machines.length]);
 
   const fetchMachines = async () => {
     try {
@@ -32,6 +46,37 @@ const VendingMachinesSection = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const requestLocation = async () => {
+    setLocationLoading(true);
+    try {
+      const location = await getUserLocation();
+      setUserLocation(location);
+    } catch (error) {
+      console.log('Location access denied or unavailable');
+    }
+    setLocationLoading(false);
+  };
+
+  const sortMachinesByDistance = () => {
+    if (!userLocation) return;
+
+    const machinesWithDistance = machines.map(machine => ({
+      ...machine,
+      distance: machine.latitude && machine.longitude 
+        ? getDistance(userLocation.latitude, userLocation.longitude, Number(machine.latitude), Number(machine.longitude))
+        : undefined
+    }));
+
+    // Sort by distance, putting machines without coordinates at the end
+    machinesWithDistance.sort((a, b) => {
+      if (a.distance === undefined) return 1;
+      if (b.distance === undefined) return -1;
+      return a.distance - b.distance;
+    });
+
+    setMachines(machinesWithDistance);
   };
 
   const handleSelectMachine = (machine: VendingMachine) => {
@@ -61,12 +106,22 @@ const VendingMachinesSection = () => {
     <section id="vending-machines" className="py-20 px-4 bg-muted/50">
       <div className="container mx-auto max-w-6xl">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Find Nearby Vending Machines
-          </h2>
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold">
+              Find Nearby Vending Machines
+            </h2>
+            {userLocation && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Navigation className="w-3 h-3" />
+                Location enabled
+              </Badge>
+            )}
+          </div>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Locate convenient vending machines near you for quick and easy access to 
-            feminine hygiene products anytime, anywhere.
+            {userLocation 
+              ? "Machines sorted by distance from your location"
+              : "Locate convenient vending machines near you for quick and easy access to feminine hygiene products anytime, anywhere."
+            }
           </p>
         </div>
 
@@ -93,10 +148,23 @@ const VendingMachinesSection = () => {
                           <MapPin className="h-4 w-4" />
                           {machine.location}
                         </CardDescription>
+                        {machine.distance && (
+                          <div className="flex items-center text-primary text-sm font-medium mt-1">
+                            <Navigation className="w-3 h-3 mr-1" />
+                            {formatDistance(machine.distance)} away
+                          </div>
+                        )}
                       </div>
-                      <Badge variant={machine.status === 'active' ? 'default' : 'secondary'}>
-                        {machine.status}
-                      </Badge>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge variant={machine.status === 'active' ? 'default' : 'secondary'}>
+                          {machine.status}
+                        </Badge>
+                        {machine.distance && machine.distance <= 1 && (
+                          <Badge variant="outline" className="text-xs text-primary border-primary">
+                            Nearby
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
