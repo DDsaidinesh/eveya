@@ -1,5 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Info, Bot, X } from 'lucide-react';
+import { Send, Info, Bot, X, AlertCircle, LogIn, User } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { chatApi, ChatApiError } from '@/services/chatApi';
+import { sessionManager, SessionData } from '@/utils/sessionManager';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Message {
   id: string;
@@ -8,15 +13,99 @@ interface Message {
   timestamp: Date;
 }
 
+interface ChatState {
+  sessionId: string | null;
+  isConnected: boolean;
+  hasError: boolean;
+  errorMessage: string;
+}
+
+// Custom link component for markdown
+const MarkdownLink = ({ href, children }: { href?: string; children: React.ReactNode }) => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (href?.startsWith('/')) {
+      // Internal navigation
+      window.location.href = href;
+    } else if (href?.startsWith('http')) {
+      // External links
+      window.open(href, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  return (
+    <a 
+      href={href} 
+      onClick={handleClick}
+      className="text-blue-600 hover:text-blue-800 underline cursor-pointer"
+      target={href?.startsWith('http') ? '_blank' : '_self'}
+      rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+    >
+      {children}
+    </a>
+  );
+};
+
+// Custom markdown components
+const markdownComponents = {
+  a: MarkdownLink,
+  h1: ({ children }: { children: React.ReactNode }) => (
+    <h1 className="text-lg font-bold mb-2 text-foreground">{children}</h1>
+  ),
+  h2: ({ children }: { children: React.ReactNode }) => (
+    <h2 className="text-md font-semibold mb-2 text-foreground">{children}</h2>
+  ),
+  h3: ({ children }: { children: React.ReactNode }) => (
+    <h3 className="text-sm font-semibold mb-1 text-foreground">{children}</h3>
+  ),
+  p: ({ children }: { children: React.ReactNode }) => (
+    <p className="mb-2 text-sm leading-relaxed">{children}</p>
+  ),
+  ul: ({ children }: { children: React.ReactNode }) => (
+    <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>
+  ),
+  ol: ({ children }: { children: React.ReactNode }) => (
+    <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>
+  ),
+  li: ({ children }: { children: React.ReactNode }) => (
+    <li className="text-sm">{children}</li>
+  ),
+  strong: ({ children }: { children: React.ReactNode }) => (
+    <strong className="font-semibold text-foreground">{children}</strong>
+  ),
+  em: ({ children }: { children: React.ReactNode }) => (
+    <em className="italic">{children}</em>
+  ),
+  code: ({ children }: { children: React.ReactNode }) => (
+    <code className="bg-secondary px-1 py-0.5 rounded text-xs font-mono">{children}</code>
+  ),
+  blockquote: ({ children }: { children: React.ReactNode }) => (
+    <blockquote className="border-l-4 border-primary pl-3 py-1 bg-secondary/50 rounded-r mb-2">
+      {children}
+    </blockquote>
+  ),
+};
+
 const FloatingAiAssistant = () => {
+  const { user, session, loading } = useAuth();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [charCount, setCharCount] = useState(0);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [chatState, setChatState] = useState<ChatState>({
+    sessionId: null,
+    isConnected: false,
+    hasError: false,
+    errorMessage: ''
+  });
   const maxChars = 2000;
   const chatRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Use authenticated user ID if available, otherwise fall back to session manager
+  const userId = user?.id || sessionManager.getOrCreateUserId();
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -26,18 +115,49 @@ const FloatingAiAssistant = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Initialize chat session when opened
   useEffect(() => {
-    if (isChatOpen && messages.length === 0) {
-      // Add welcome message when chat opens for the first time
-      const welcomeMessage: Message = {
-        id: '1',
-        text: "Hello! I'm your Eeveya Labs assistant. I can help you with product information, vending machine locations, orders, and any questions about our health and wellness products. How can I assist you today?",
-        isBot: true,
-        timestamp: new Date()
-      };
-      setMessages([welcomeMessage]);
+    if (isChatOpen && !chatState.sessionId && messages.length === 0) {
+      // Check if user is logged in
+      if (!user && !loading) {
+        // Require login - no API calls without authentication
+        setShowLoginPrompt(true);
+        const loginPromptMessage: Message = {
+          id: '0',
+          text: "## Welcome to Eveya! 🌸\n\nHello! I'm your **Eveya assistant**, here to help you discover our premium women's hygiene products.\n\n**Please log in to access:**\n- 🩸 Personalized product recommendations\n- 📍 Real-time vending machine inventory\n- 📦 Order tracking and history\n- 💳 RFID card benefits and savings\n\n*Secure conversations require authentication for your privacy and safety.*",
+          isBot: true,
+          timestamp: new Date()
+        };
+        setMessages([loginPromptMessage]);
+      } else if (user) {
+        // Only initialize if user is authenticated
+        initializeChat();
+      }
     }
-  }, [isChatOpen, messages.length]);
+  }, [isChatOpen, user, loading]);
+
+  // Re-initialize chat when user logs in/out
+  useEffect(() => {
+    if (isChatOpen && chatState.sessionId) {
+      // If user status changed, reinitialize with new user context
+      const currentUserId = user?.id || sessionManager.getOrCreateUserId();
+      if (currentUserId !== userId) {
+        handleClearChat();
+        setTimeout(() => initializeChat(), 100);
+      }
+    }
+  }, [user?.id]);
+
+  // Auto-retry connection if there's an error
+  useEffect(() => {
+    if (chatState.hasError && isChatOpen) {
+      const retryTimer = setTimeout(() => {
+        initializeChat();
+      }, 5000); // Retry after 5 seconds
+      
+      return () => clearTimeout(retryTimer);
+    }
+  }, [chatState.hasError, isChatOpen]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -45,74 +165,216 @@ const FloatingAiAssistant = () => {
     setCharCount(value.length);
   };
 
-  const getBotResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    // Simple keyword-based responses for Eeveya Labs
-    if (lowerMessage.includes('product') || lowerMessage.includes('what do you sell')) {
-      return "We offer a range of health and wellness products including Active Flex joint supplements and Leaf Pads wellness products. You can browse all our products on the main page or visit any of our vending machines.";
-    }
-    
-    if (lowerMessage.includes('machine') || lowerMessage.includes('location') || lowerMessage.includes('where')) {
-      return "Our vending machines are located in various convenient locations. You can find the nearest machine by checking our vending machines section on the dashboard. Each machine shows its current status and available products.";
-    }
-    
-    if (lowerMessage.includes('order') || lowerMessage.includes('purchase') || lowerMessage.includes('buy')) {
-      return "You can purchase products directly from our vending machines using PhonePe payment. Simply select your products, proceed to checkout, and complete the payment. You'll receive a dispensing code to collect your items.";
-    }
-    
-    if (lowerMessage.includes('payment') || lowerMessage.includes('phonepe')) {
-      return "We accept payments through PhonePe for secure and convenient transactions. The payment process is quick and you'll receive instant confirmation with your dispensing code.";
-    }
-    
-    if (lowerMessage.includes('active flex')) {
-      return "Active Flex is our premium joint health supplement designed to support flexibility and mobility. It's available in our vending machines and comes with detailed usage instructions.";
-    }
-    
-    if (lowerMessage.includes('leaf pads')) {
-      return "Leaf Pads are our innovative wellness products that provide natural health benefits. They're available in our vending machines with various formulations to suit different needs.";
-    }
-    
-    if (lowerMessage.includes('help') || lowerMessage.includes('support')) {
-      return "I'm here to help! You can ask me about our products, vending machine locations, how to make purchases, payment methods, or any other questions about Eeveya Labs. What would you like to know?";
-    }
-    
-    // Default response
-    return "Thank you for your question! I can help you with information about our products, vending machines, orders, and more. Could you please be more specific about what you'd like to know?";
+  // Handle login redirect
+  const handleLoginRedirect = () => {
+    setIsChatOpen(false);
+    // Navigate to login page - you can customize this based on your routing
+    window.location.href = '/auth';
   };
 
-  const handleSend = () => {
-    if (message.trim()) {
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        text: message,
-        isBot: false,
-        timestamp: new Date()
+  // Handle guest continue - removed since we require login
+  const handleContinueAsGuest = () => {
+    // No longer allow guest access
+    handleLoginRedirect();
+  };
+
+  // Initialize chat session
+  const initializeChat = async () => {
+    try {
+      setChatState(prev => ({ ...prev, hasError: false, errorMessage: '' }));
+      
+      // Check for existing session first
+      const existingSession = sessionManager.getCurrent();
+      
+      if (existingSession && existingSession.isValid) {
+        // Restore existing session
+        setChatState(prev => ({
+          ...prev,
+          sessionId: existingSession.sessionId,
+          isConnected: true
+        }));
+        
+        // Load chat history
+        try {
+          const history = await chatApi.getHistory(existingSession.sessionId);
+          const historyMessages: Message[] = history.messages.map(msg => ({
+            id: msg.id,
+            text: msg.content,
+            isBot: msg.role === 'assistant',
+            timestamp: new Date(msg.timestamp)
+          }));
+          setMessages(historyMessages);
+        } catch (error) {
+          console.warn('Failed to load chat history, starting fresh session');
+          await startNewSession();
+        }
+      } else {
+        // Start new session
+        await startNewSession();
+      }
+    } catch (error) {
+      handleChatError(error);
+    }
+  };
+
+  // Start a new chat session
+  const startNewSession = async () => {
+    try {
+      const currentUserId = user?.id || sessionManager.getOrCreateUserId();
+      const response = await chatApi.startSession(currentUserId);
+      
+      setChatState({
+        sessionId: response.session_id,
+        isConnected: true,
+        hasError: false,
+        errorMessage: ''
+      });
+      
+      // Create session data for local storage
+      sessionManager.create(currentUserId);
+      
+      // Add welcome message with user-specific content
+      const welcomeText = user 
+        ? `Hello ${user.email?.split('@')[0]}! ${response.message}` 
+        : response.message;
+        
+      const welcomeMessage: Message = {
+        id: '1',
+        text: welcomeText,
+        isBot: true,
+        timestamp: new Date(response.timestamp)
+      };
+      setMessages([welcomeMessage]);
+      
+    } catch (error) {
+      handleChatError(error);
+    }
+  };
+
+  // Handle chat errors
+  const handleChatError = (error: any) => {
+    console.error('Chat error:', error);
+    
+    let errorMessage = 'Unable to connect to chat service. Please try again.';
+    
+    if (error instanceof ChatApiError) {
+      errorMessage = error.message;
+      
+      // If session expired, clear it
+      if (error.statusCode === 404) {
+        sessionManager.clear();
+        setChatState(prev => ({ ...prev, sessionId: null }));
+      }
+    }
+    
+    setChatState(prev => ({
+      ...prev,
+      isConnected: false,
+      hasError: true,
+      errorMessage
+    }));
+    
+    // Add error message to chat
+    const errorMsg: Message = {
+      id: Date.now().toString(),
+      text: errorMessage,
+      isBot: true,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, errorMsg]);
+  };
+
+  // Send message to AI
+  const handleSend = async () => {
+    if (!message.trim() || !chatState.sessionId || isTyping) {
+      return;
+    }
+
+    const userMessageText = message.trim();
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: userMessageText,
+      isBot: false,
+      timestamp: new Date()
+    };
+
+    // Add user message immediately
+    setMessages(prev => [...prev, userMessage]);
+    setMessage('');
+    setCharCount(0);
+    setIsTyping(true);
+
+    try {
+      // Update session activity
+      sessionManager.updateActivity(chatState.sessionId);
+      
+      // Send to API with current user ID
+      const currentUserId = user?.id || sessionManager.getOrCreateUserId();
+      const response = await chatApi.sendMessage(
+        chatState.sessionId,
+        userMessageText,
+        currentUserId
+      );
+
+      // Add AI response
+      const botResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: response.response,
+        isBot: true,
+        timestamp: new Date(response.timestamp)
       };
       
-      setMessages(prev => [...prev, userMessage]);
-      setMessage('');
-      setCharCount(0);
-      setIsTyping(true);
+      setMessages(prev => [...prev, botResponse]);
       
-      // Simulate bot typing delay
-      setTimeout(() => {
-        const botResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          text: getBotResponse(message),
-          isBot: true,
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, botResponse]);
-        setIsTyping(false);
-      }, 1000 + Math.random() * 1000); // 1-2 second delay
+      // Clear any previous errors
+      if (chatState.hasError) {
+        setChatState(prev => ({ ...prev, hasError: false, errorMessage: '' }));
+      }
+      
+    } catch (error) {
+      handleChatError(error);
+    } finally {
+      setIsTyping(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !isTyping) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  // Retry connection
+  const handleRetry = () => {
+    initializeChat();
+  };
+
+  // Clear chat and start fresh
+  const handleClearChat = () => {
+    sessionManager.clear();
+    setMessages([]);
+    setShowLoginPrompt(false);
+    setChatState({
+      sessionId: null,
+      isConnected: false,
+      hasError: false,
+      errorMessage: ''
+    });
+    if (isChatOpen) {
+      // Check if user is logged in for initialization
+      if (!user && !loading) {
+        setShowLoginPrompt(true);
+        const loginPromptMessage: Message = {
+          id: '0',
+          text: "Hello! I'm your AI assistant. For the best experience and to access personalized features, please log in to your account. You can still chat with me as a guest with limited functionality.",
+          isBot: true,
+          timestamp: new Date()
+        };
+        setMessages([loginPromptMessage]);
+      } else {
+        initializeChat();
+      }
     }
   };
 
@@ -173,16 +435,52 @@ const FloatingAiAssistant = () => {
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-4 pb-2 border-b border-border">
               <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <div className={`w-2 h-2 rounded-full ${
+                  chatState.hasError 
+                    ? 'bg-red-500 animate-pulse' 
+                    : chatState.isConnected 
+                    ? 'bg-green-500 animate-pulse' 
+                    : 'bg-yellow-500 animate-pulse'
+                }`}></div>
                 <span className="text-xs font-medium text-muted-foreground">Eeveya Labs Assistant</span>
+                {user && (
+                  <div className="flex items-center gap-1 ml-2">
+                    <User className="w-3 h-3 text-primary" />
+                    <span className="text-xs font-medium text-primary">
+                      {user.email?.split('@')[0]}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-2xl">
                   AI
                 </span>
-                <span className="px-2 py-1 text-xs font-medium bg-primary/10 text-primary border border-primary/20 rounded-2xl">
-                  Online
+                <span className={`px-2 py-1 text-xs font-medium rounded-2xl border ${
+                  user 
+                    ? 'bg-green-50 text-green-600 border-green-200'
+                    : 'bg-blue-50 text-blue-600 border-blue-200'
+                }`}>
+                  {user ? 'Authenticated' : 'Guest'}
                 </span>
+                <span className={`px-2 py-1 text-xs font-medium rounded-2xl border ${
+                  chatState.hasError
+                    ? 'bg-red-50 text-red-600 border-red-200'
+                    : chatState.isConnected
+                    ? 'bg-green-50 text-green-600 border-green-200'
+                    : 'bg-yellow-50 text-yellow-600 border-yellow-200'
+                }`}>
+                  {chatState.hasError ? 'Error' : chatState.isConnected ? 'Online' : 'Connecting...'}
+                </span>
+                {chatState.hasError && (
+                  <button
+                    onClick={handleRetry}
+                    className="p-1.5 rounded-full hover:bg-secondary transition-colors"
+                    title="Retry connection"
+                  >
+                    <AlertCircle className="w-4 h-4 text-red-500" />
+                  </button>
+                )}
                 <button 
                   onClick={() => setIsChatOpen(false)}
                   className="p-1.5 rounded-full hover:bg-secondary transition-colors"
@@ -206,13 +504,49 @@ const FloatingAiAssistant = () => {
                         : 'bg-primary text-primary-foreground'
                     }`}
                   >
-                    <p className="text-sm">{msg.text}</p>
+                    {msg.isBot ? (
+                      <div className="text-sm">
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          components={markdownComponents}
+                        >
+                          {msg.text}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="text-sm">{msg.text}</p>
+                    )}
                     <p className="text-xs opacity-70 mt-1">
                       {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                 </div>
               ))}
+              
+              {/* Login Prompt */}
+              {showLoginPrompt && !user && (
+                <div className="flex justify-center">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-[90%]">
+                    <div className="flex items-center gap-2 mb-3">
+                      <LogIn className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800">Login Required</span>
+                    </div>
+                    <p className="text-sm text-blue-700 mb-3">
+                      Please log in to access the AI assistant and enjoy personalized recommendations, order tracking, and secure conversations.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleLoginRedirect}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      >
+                        <LogIn className="w-4 h-4" />
+                        Log In to Continue
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {isTyping && (
                 <div className="flex justify-start">
                   <div className="bg-secondary text-secondary-foreground px-4 py-2 rounded-lg">
@@ -235,8 +569,15 @@ const FloatingAiAssistant = () => {
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
                   rows={2}
-                  className="w-full px-4 py-3 bg-transparent border-none outline-none resize-none text-sm font-normal leading-relaxed text-foreground placeholder-muted-foreground"
-                  placeholder="Ask about products, machines, orders..."
+                  disabled={showLoginPrompt}
+                  className="w-full px-4 py-3 bg-transparent border-none outline-none resize-none text-sm font-normal leading-relaxed text-foreground placeholder-muted-foreground disabled:opacity-50"
+                  placeholder={
+                    showLoginPrompt 
+                      ? "Please log in to start chatting..."
+                      : user
+                      ? "Ask about your orders, products, machines..."
+                      : "Please log in to start chatting..."
+                  }
                   style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 />
               </div>
@@ -255,8 +596,15 @@ const FloatingAiAssistant = () => {
                     {/* Send Button */}
                     <button 
                       onClick={handleSend}
-                      disabled={!message.trim()}
+                      disabled={!message.trim() || !chatState.isConnected || isTyping || showLoginPrompt}
                       className="group relative p-2.5 bg-primary border-none rounded-lg cursor-pointer transition-all duration-300 text-primary-foreground shadow-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={
+                        showLoginPrompt 
+                          ? 'Please log in to start chatting'
+                          : !chatState.isConnected 
+                          ? 'Connecting to chat service...' 
+                          : 'Send message'
+                      }
                     >
                       <Send className="w-4 h-4" />
                     </button>
@@ -264,10 +612,51 @@ const FloatingAiAssistant = () => {
                 </div>
 
                 {/* Footer Info */}
-                <div className="flex items-center justify-center mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                    <span>Online</span>
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <div className={`w-1.5 h-1.5 rounded-full ${
+                        chatState.hasError 
+                          ? 'bg-red-500' 
+                          : chatState.isConnected 
+                          ? 'bg-green-500' 
+                          : 'bg-yellow-500'
+                      }`}></div>
+                      <span>
+                        {chatState.hasError 
+                          ? 'Connection Error' 
+                          : chatState.isConnected 
+                          ? 'Connected' 
+                          : 'Connecting...'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className={`w-1.5 h-1.5 rounded-full ${
+                        user ? 'bg-green-500' : 'bg-red-500'
+                      }`}></div>
+                      <span>{user ? 'Authenticated' : 'Login Required'}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!user && !showLoginPrompt && (
+                      <button
+                        onClick={handleLoginRedirect}
+                        className="text-xs text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1"
+                        title="Login required to chat"
+                      >
+                        <LogIn className="w-3 h-3" />
+                        Login Required
+                      </button>
+                    )}
+                    {chatState.sessionId && (
+                      <button
+                        onClick={handleClearChat}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        title="Start new conversation"
+                      >
+                        New Chat
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
