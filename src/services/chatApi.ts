@@ -7,10 +7,7 @@
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { supabase } from '@/integrations/supabase/client';
-
-// API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001';
-const API_VERSION = '/api/v1';
+import { API_CONFIG } from '@/config/api';
 
 // Request/Response Types
 export interface ChatStartResponse {
@@ -73,16 +70,10 @@ export class ChatApiService {
   private readonly baseUrl: string;
 
   constructor() {
-    this.baseUrl = `${API_BASE_URL}${API_VERSION}`;
+    this.baseUrl = API_CONFIG.baseURL;
     
     // Create axios instance with default configuration
-    this.api = axios.create({
-      baseURL: this.baseUrl,
-      timeout: 30000, // 30 second timeout
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    this.api = axios.create(API_CONFIG);
 
     // Add request interceptor for logging and auth
     this.api.interceptors.request.use(
