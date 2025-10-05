@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ShoppingCart, Menu, X, Heart, User, Search, LogOut, Smartphone } from 'lucide-react';
+import { ShoppingCart, Menu, X, Heart, User, Search, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -76,14 +76,6 @@ const Header = () => {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-4">
-            {/* Mobile Vending App Button */}
-            <Button variant="default" size="sm" asChild className="hidden sm:inline-flex">
-              <Link to="/vending">
-                <Smartphone className="h-4 w-4 mr-2" />
-                Vending App
-              </Link>
-            </Button>
-
             {/* Search Button - Mobile */}
             <Button variant="ghost" size="icon" className="lg:hidden">
               <Search className="h-5 w-5" />
@@ -174,17 +166,6 @@ const Header = () => {
                   />
                 </form>
               </div>
-              
-              <Link
-                to="/vending"
-                className="text-foreground hover:text-primary block px-3 py-2 rounded-lg text-base font-medium transition-smooth hover:bg-muted sm:hidden"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <div className="flex items-center">
-                  <Smartphone className="h-4 w-4 mr-2" />
-                  Vending App
-                </div>
-              </Link>
 
               {navigation.map((item) => (
                 <a
