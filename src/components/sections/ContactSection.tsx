@@ -1,7 +1,6 @@
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Mail, Phone, MapPin, Send } from 'lucide-react';
+import { Mail, Phone, MapPin } from 'lucide-react';
 
 const ContactSection = () => {
   return (
@@ -23,7 +22,7 @@ const ContactSection = () => {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-12">
+          <div className="max-w-3xl mx-auto">
             {/* Contact Information */}
             <div className="space-y-8">
               <Card className="overflow-hidden hover:shadow-elegant transition-all duration-300">
@@ -80,76 +79,6 @@ const ContactSection = () => {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Contact Form */}
-            <Card className="overflow-hidden hover:shadow-elegant transition-all duration-300">
-              <CardContent className="p-8">
-                <h3 className="text-2xl font-bold text-foreground mb-6">Send us a Message</h3>
-                
-                <form className="space-y-6">
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        First Name
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
-                        placeholder="Your first name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Last Name
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
-                        placeholder="Your last name"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
-                      placeholder="your.email@example.com"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Company/Organization
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
-                      placeholder="Your company name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Message
-                    </label>
-                    <textarea
-                      rows={4}
-                      className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background resize-none"
-                      placeholder="Tell us about your partnership interests..."
-                    ></textarea>
-                  </div>
-
-                  <Button className="w-full" size="lg" variant="premium">
-                    <Send className="h-4 w-4 mr-2" />
-                    Send Message
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>

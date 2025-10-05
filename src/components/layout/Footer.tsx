@@ -1,6 +1,5 @@
 import { Heart, Mail, Phone, MapPin, Facebook, Instagram, Twitter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 
 const Footer = () => {
   const quickLinks = [
@@ -77,10 +76,10 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Contact & Newsletter */}
+          {/* Contact */}
           <div>
             <h4 className="font-semibold text-foreground mb-4">Stay Connected</h4>
-            <div className="space-y-3 mb-6">
+            <div className="space-y-3">
               <div className="flex items-center text-muted-foreground">
                 <Mail className="h-4 w-4 mr-2" />
                 <span className="text-sm">hello@eveya.com</span>
@@ -92,21 +91,6 @@ const Footer = () => {
               <div className="flex items-center text-muted-foreground">
                 <MapPin className="h-4 w-4 mr-2" />
                 <span className="text-sm">Mumbai, India</span>
-              </div>
-            </div>
-
-            {/* Newsletter */}
-            <div>
-              <h5 className="font-medium text-foreground mb-2">Newsletter</h5>
-              <div className="flex gap-2">
-                <Input
-                  type="email"
-                  placeholder="Your email"
-                  className="flex-1"
-                />
-                <Button variant="premium" size="sm">
-                  Subscribe
-                </Button>
               </div>
             </div>
           </div>
