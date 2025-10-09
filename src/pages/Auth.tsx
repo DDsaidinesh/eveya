@@ -75,7 +75,7 @@ const Auth = () => {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Welcome to EEVYA</CardTitle>
           <CardDescription>
-            Manage your RFID cards and smart products
+            Access your account and manage orders
           </CardDescription>
         </CardHeader>
         <CardContent>

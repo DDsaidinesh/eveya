@@ -1,8 +1,25 @@
+import { useState } from 'react';
 import heroProducts from '@/assets/hero-products.jpg';
 import { ArrowRight, Shield, Heart, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel,
+  AlertDialogFooter,
+} from '@/components/ui/alert-dialog';
 
 const HeroSection = () => {
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
+
+  const handleFindMachines = () => {
+    document.getElementById('vending-machines')?.scrollIntoView({ 
+      behavior: 'smooth' 
+    });
+  };
   return (
     <section className="relative min-h-[80vh] flex items-center justify-center bg-gradient-subtle overflow-hidden">
       {/* Background Pattern */}
@@ -49,14 +66,89 @@ const HeroSection = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button size="lg" variant="premium" className="group">
+              <Button size="lg" variant="premium" className="group" onClick={handleFindMachines}>
                 Find Machines
                 <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button size="lg" variant="elegant">
+              <Button size="lg" variant="elegant" onClick={() => setShowHowItWorks(true)}>
                 How It Works
               </Button>
             </div>
+
+            {/* How It Works Dialog */}
+            <AlertDialog open={showHowItWorks} onOpenChange={setShowHowItWorks}>
+              <AlertDialogContent className="max-w-2xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-2xl">How It Works</AlertDialogTitle>
+                  <AlertDialogDescription className="text-left pt-4">
+                    <div className="space-y-6">
+                      <div className="flex gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
+                          1
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground mb-1">Find a Nearby Vending Machine</h4>
+                          <p className="text-sm text-muted-foreground">Use our location-based search to find the nearest vending machine.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
+                          2
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground mb-1">Browse Available Products</h4>
+                          <p className="text-sm text-muted-foreground">View real-time inventory and product details for the selected machine.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
+                          3
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground mb-1">Select Products & Add to Cart</h4>
+                          <p className="text-sm text-muted-foreground">Choose your products and quantities, then proceed to checkout.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
+                          4
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground mb-1">Checkout & Make Payment</h4>
+                          <p className="text-sm text-muted-foreground">Complete your purchase securely using PhonePe payment gateway.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
+                          5
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground mb-1">Receive Dispensing Code</h4>
+                          <p className="text-sm text-muted-foreground">Get a unique code on your screen and via email after successful payment.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
+                          6
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground mb-1">Collect Your Products</h4>
+                          <p className="text-sm text-muted-foreground">Enter the code at the vending machine to dispense your products instantly.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Close</AlertDialogCancel>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
 
           {/* Hero Image */}

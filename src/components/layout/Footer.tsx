@@ -5,7 +5,6 @@ const Footer = () => {
   const quickLinks = [
     { name: 'About Us', href: '#about' },
     { name: 'Products', href: '#products' },
-    { name: 'RFID Recharge', href: '#rfid' },
     { name: 'FAQ', href: '#faq' }
   ];
 
