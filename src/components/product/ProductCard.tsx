@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Product } from '@/data/products';
-import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import QuickPurchaseModal from './QuickPurchaseModal';
 
@@ -15,14 +14,9 @@ interface ProductCardProps {
 const ProductCard = ({ product }: ProductCardProps) => {
   const [selectedVariant, setSelectedVariant] = useState(product.variants[0]);
   const [showQuickPurchase, setShowQuickPurchase] = useState(false);
-  const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
   const isLiked = isInWishlist(product.id);
-
-  const handleAddToCart = () => {
-    addToCart(product, selectedVariant);
-  };
 
   const handleQuickPurchase = () => {
     setShowQuickPurchase(true);
@@ -146,12 +140,12 @@ const ProductCard = ({ product }: ProductCardProps) => {
         {/* Action Buttons */}
         <div className="flex gap-2">
           <Button 
-            onClick={handleAddToCart}
+            onClick={handleQuickPurchase}
             variant="outline"
             className="flex-1"
           >
             <ShoppingCart className="h-4 w-4 mr-2" />
-            Add to Cart
+            Select Machine
           </Button>
           <Button 
             onClick={handleQuickPurchase}

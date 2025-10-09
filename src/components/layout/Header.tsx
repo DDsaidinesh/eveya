@@ -1,20 +1,17 @@
 import { useState } from 'react';
-import { ShoppingCart, Menu, X, Heart, User, Search, LogOut } from 'lucide-react';
+import { Menu, X, Heart, User, Search, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useAuth } from '@/contexts/AuthContext';
-import CartDrawer from '@/components/cart/CartDrawer';
 import WishlistDrawer from '@/components/wishlist/WishlistDrawer';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { state: cartState } = useCart();
   const { items: wishlistItems } = useWishlist();
   const { user, signOut } = useAuth();
 
@@ -91,17 +88,6 @@ const Header = () => {
                 )}
               </Button>
             </WishlistDrawer>
-            
-            <CartDrawer>
-              <Button variant="ghost" size="icon" className="relative">
-                <ShoppingCart className="h-5 w-5" />
-                {cartState.itemCount > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                    {cartState.itemCount}
-                  </Badge>
-                )}
-              </Button>
-            </CartDrawer>
 
             {user ? (
               <DropdownMenu>

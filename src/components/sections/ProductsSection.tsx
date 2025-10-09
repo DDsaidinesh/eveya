@@ -77,11 +77,6 @@ const ProductsSection = () => {
     ? products 
     : products.filter(product => product.category === selectedCategory);
 
-  const handleAddToCart = (productId: string, variant: any) => {
-    // This function is no longer needed as ProductCard handles it internally
-    console.log('Product card will handle cart operations internally');
-  };
-
   return (
     <section id="products" className="py-16 bg-background">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">

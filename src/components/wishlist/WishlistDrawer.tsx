@@ -1,4 +1,5 @@
-import { Heart, ShoppingCart, X, Trash2 } from 'lucide-react';
+import { Heart, Zap, X, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -10,7 +11,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { useCart } from '@/contexts/CartContext';
+import QuickPurchaseModal from '@/components/product/QuickPurchaseModal';
 
 interface WishlistDrawerProps {
   children: React.ReactNode;
@@ -18,23 +19,23 @@ interface WishlistDrawerProps {
 
 const WishlistDrawer = ({ children }: WishlistDrawerProps) => {
   const { items, removeFromWishlist, clearWishlist } = useWishlist();
-  const { addToCart } = useCart();
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [showQuickPurchase, setShowQuickPurchase] = useState(false);
 
-  const handleMoveToCart = (item: any) => {
-    // Create a mock product object for cart
+  const handleBuyNow = (item: any) => {
+    // Create a mock product object for QuickPurchaseModal
     const mockProduct = {
       id: item.id,
       name: item.name,
       image: item.image,
-      category: item.category
-    };
-    const mockVariant = {
-      size: 'Standard',
-      price: item.price
+      category: item.category,
+      description: '',
+      variants: [{ size: 'Standard', price: item.price }],
+      features: []
     };
     
-    addToCart(mockProduct, mockVariant);
-    removeFromWishlist(item.id);
+    setSelectedProduct(mockProduct);
+    setShowQuickPurchase(true);
   };
 
   if (items.length === 0) {
@@ -103,12 +104,12 @@ const WishlistDrawer = ({ children }: WishlistDrawerProps) => {
                     </span>
                     <div className="flex gap-2">
                       <Button
-                        variant="outline"
+                        variant="premium"
                         size="sm"
-                        onClick={() => handleMoveToCart(item)}
+                        onClick={() => handleBuyNow(item)}
                       >
-                        <ShoppingCart className="h-3 w-3 mr-1" />
-                        Add to Cart
+                        <Zap className="h-3 w-3 mr-1" />
+                        Buy Now
                       </Button>
                       <Button
                         variant="ghost"
@@ -138,6 +139,14 @@ const WishlistDrawer = ({ children }: WishlistDrawerProps) => {
           </Button>
         </div>
       </SheetContent>
+      
+      {selectedProduct && (
+        <QuickPurchaseModal 
+          open={showQuickPurchase}
+          onOpenChange={setShowQuickPurchase}
+          product={selectedProduct}
+        />
+      )}
     </Sheet>
   );
 };
